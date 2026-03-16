@@ -1,0 +1,25 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.lib
+*.dylib
+*.out
+
+# Test binary, built with `go test -c`
+*.test
+
+# IDEA
+*.iml
+.idea/
+
+.vscode/
+
+# project
+
+*.log
+upload/
+*.bak
+
+__debug_bin
