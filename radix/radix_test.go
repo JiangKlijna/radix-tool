@@ -26,30 +26,20 @@ func TestTenToX(t *testing.T) {
 	}
 }
 
-func TestXStrToTenStr(t *testing.T) {
+func TestXToTenStr(t *testing.T) {
 	// Test hex to decimal conversion
 	radixConverter := NewRadixByBit(16)
-	result := radixConverter.XStrToTenStr("ff")
+	result := radixConverter.XToTenStr("ff")
 	expected := "255"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
 	}
 }
 
-func TestXStrToTen(t *testing.T) {
-	// Test hex to decimal conversion returning big.Int
-	radixConverter := NewRadixByBit(16)
-	result := radixConverter.XStrToTen("ff")
-	expected := big.NewInt(255)
-	if result.Cmp(expected) != 0 {
-		t.Errorf("Expected %s, got %s", expected.String(), result.String())
-	}
-}
-
 func TestBinaryConversion(t *testing.T) {
 	// Test binary to decimal
 	binaryConverter := NewRadixByBit(2)
-	result := binaryConverter.XStrToTenStr("1010")
+	result := binaryConverter.XToTenStr("1010")
 	expected := "10"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -90,7 +80,7 @@ func TestBase62Conversion(t *testing.T) {
 		}
 
 		// Test base62 to decimal
-		result = base62Converter.XStrToTenStr(tc.base62)
+		result = base62Converter.XToTenStr(tc.base62)
 		if result != tc.decimal {
 			t.Errorf("Converting base62 '%s' to decimal, expected '%s', got '%s'", tc.base62, tc.decimal, result)
 		}
@@ -103,7 +93,7 @@ func TestCustomAlphabet(t *testing.T) {
 	radixConverter := NewRadixByString(customAlphabet)
 
 	// Test that it behaves like standard hexadecimal
-	result := radixConverter.XStrToTenStr("FF") // FF in our alphabet is 15*16 + 15 = 255
+	result := radixConverter.XToTenStr("FF") // FF in our alphabet is 15*16 + 15 = 255
 	expected := "255"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -123,7 +113,7 @@ func TestNewCharacterRadix(t *testing.T) {
 	number := big.NewInt(1234567)
 
 	converted := characterRadix.TenToX(number)
-	backToNum := characterRadix.XStrToTen(converted)
+	backToNum := characterRadix.XToTen(converted)
 
 	if backToNum.Cmp(number) != 0 {
 		t.Errorf("Round trip conversion failed. Original: %s, After roundtrip: %s",

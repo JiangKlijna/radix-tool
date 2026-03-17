@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"radix-tool/radix"
 	"radix-tool/utils"
@@ -64,7 +63,7 @@ func main() {
 	inputContent := input
 	if _, err := os.Stat(input); err == nil {
 		// 是文件
-		content, err := ioutil.ReadFile(input)
+		content, err := utils.ReadFile(input)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading input file: %v\n", err)
 			os.Exit(1)
@@ -81,7 +80,7 @@ func main() {
 	if outputBaseRandom != "" {
 		result := utils.ShuffleString(utils.RemoveDuplicates(inputContent))
 
-		err := ioutil.WriteFile(outputBaseRandom, []byte(result), 0644)
+		err := utils.WriteFile(outputBaseRandom, []byte(result), 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing random output file: %v\n", err)
 			os.Exit(1)
@@ -95,7 +94,7 @@ func main() {
 	if outputBaseSeq != "" {
 		result := utils.RemoveDuplicates(inputContent)
 
-		err := ioutil.WriteFile(outputBaseSeq, []byte(result), 0644)
+		err := utils.WriteFile(outputBaseSeq, []byte(result), 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing sequence output file: %v\n", err)
 			os.Exit(1)
@@ -123,7 +122,7 @@ func main() {
 	if inputStr != "" {
 		if _, err := os.Stat(inputStr); err == nil {
 			// 是文件
-			content, err := ioutil.ReadFile(inputStr)
+			content, err := utils.ReadFile(inputStr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error reading -is file: %v\n", err)
 				os.Exit(1)
@@ -139,7 +138,7 @@ func main() {
 	if outputStr != "" {
 		if _, err := os.Stat(outputStr); err == nil {
 			// 是文件
-			content, err := ioutil.ReadFile(outputStr)
+			content, err := utils.ReadFile(outputStr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error reading -os file: %v\n", err)
 				os.Exit(1)
@@ -186,14 +185,14 @@ func main() {
 	}
 
 	// 执行转换：首先将输入值转换为10进制big.Int，然后转换到目标格式
-	decimalValue := inputConverter.XStrToTen(inputContent)
+	decimalValue := inputConverter.XToTen(inputContent)
 	result := outputConverter.TenToX(decimalValue)
 
 	// 输出结果
 	if output == "" {
 		fmt.Println(result)
 	} else {
-		err := ioutil.WriteFile(output, []byte(result), 0644)
+		err := utils.WriteFile(output, []byte(result), 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing output file: %v\n", err)
 			os.Exit(1)
