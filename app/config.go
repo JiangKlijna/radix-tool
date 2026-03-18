@@ -8,13 +8,13 @@ import (
 
 type Config struct {
 	Input            string
-	InputBase        int
-	InputStr         string
+	InputBaseNum     int
+	InputBaseStr     string
 	Output           string
-	OutputBase       int
-	OutputStr        string
-	OutputBaseRandom string
-	OutputBaseSeq    string
+	OutputBaseNum    int
+	OutputBaseStr    string
+	OutputRandomBase string
+	OutputOrderBase  string
 	Help             bool
 }
 
@@ -27,24 +27,26 @@ func ParseFlags(args []string) (*Config, error) {
 	flagSet.StringVar(&cfg.Input, "i", "", "Input value (number or file path)")
 	flagSet.StringVar(&cfg.Input, "input", "", "Input value (number or file path)")
 
-	flagSet.IntVar(&cfg.InputBase, "ib", 0, "Input base number (2-62)")
-	flagSet.IntVar(&cfg.InputBase, "input-base-num", 0, "Input base number (2-62)")
+	flagSet.IntVar(&cfg.InputBaseNum, "in", 0, "Input base number (2-62)")
+	flagSet.IntVar(&cfg.InputBaseNum, "input-base-num", 0, "Input base number (2-62)")
 
-	flagSet.StringVar(&cfg.InputStr, "is", "", "Input base characters")
+	flagSet.StringVar(&cfg.InputBaseStr, "is", "", "Input base characters")
+	flagSet.StringVar(&cfg.InputBaseStr, "input-base-str", "", "Input base characters")
 
 	flagSet.StringVar(&cfg.Output, "o", "", "Output file path (if empty, prints to cmd)")
 	flagSet.StringVar(&cfg.Output, "output", "", "Output file path (if empty, prints to cmd)")
 
-	flagSet.IntVar(&cfg.OutputBase, "ob", 0, "Output base number (2-62, defaults to input base)")
-	flagSet.IntVar(&cfg.OutputBase, "output-base-num", 0, "Output base number (2-62, defaults to input base)")
+	flagSet.IntVar(&cfg.OutputBaseNum, "on", 0, "Output base number (2-62, defaults to input base)")
+	flagSet.IntVar(&cfg.OutputBaseNum, "output-base-num", 0, "Output base number (2-62, defaults to input base)")
 
-	flagSet.StringVar(&cfg.OutputStr, "os", "", "Output base characters")
+	flagSet.StringVar(&cfg.OutputBaseStr, "os", "", "Output base characters")
+	flagSet.StringVar(&cfg.OutputBaseStr, "output-base-str", "", "Output base characters")
 
-	flagSet.StringVar(&cfg.OutputBaseRandom, "obr", "", "Randomly output characters from -is (empty means to stderr)")
-	flagSet.StringVar(&cfg.OutputBaseRandom, "output-base-random", "", "Randomly output characters from -is (empty means to stderr)")
+	flagSet.StringVar(&cfg.OutputRandomBase, "orb", "", "Randomly output characters from -is (empty means to stderr)")
+	flagSet.StringVar(&cfg.OutputRandomBase, "output-random-base", "", "Randomly output characters from -is (empty means to stderr)")
 
-	flagSet.StringVar(&cfg.OutputBaseSeq, "obs", "", "Sequence output characters from -is (empty means to stderr)")
-	flagSet.StringVar(&cfg.OutputBaseSeq, "output-base-sequence", "", "Sequence output characters from -is (empty means to stderr)")
+	flagSet.StringVar(&cfg.OutputOrderBase, "oob", "", "Sequence output characters from -is (empty means to stderr)")
+	flagSet.StringVar(&cfg.OutputOrderBase, "output-order-base", "", "Sequence output characters from -is (empty means to stderr)")
 
 	flagSet.BoolVar(&cfg.Help, "help", false, "Show help")
 	flagSet.BoolVar(&cfg.Help, "h", false, "Show help")
@@ -67,20 +69,20 @@ FLAGS:
 
 OPTIONS:
   -i, --input VALUE        Input value (number or file path) [required]
-  -ib, --input-base-num N  Input base number (2-62)
+  -in, --input-base-num N  Input base number (2-62)
   -is, --input-base-str STR  Input base characters
   -o, --output FILE        Output file path (prints to stdout if omitted)
-  -ob, --output-base-num N Output base number (2-62, defaults to input base) 
+  -on, --output-base-num N Output base number (2-62, defaults to input base) 
   -os, --output-base-str STR Output base characters
-  -obr, --output-base-random  Randomly output characters from -i input
-  -obs, --output-base-sequence  Sequence output characters from -i input
+  -orb, --output-random-base  Randomly output characters from -is (empty means to stderr)
+  -oob, --output-order-base  Sequence output characters from -is (empty means to stderr)
 
 EXAMPLES:
   # Convert decimal 255 to hexadecimal
-  radix-tool -i "255" -ib 10 -ob 16
+  radix-tool -i "255" -in 10 -on 16
   
   # Convert binary string to decimal
-  radix-tool -i "1010" -ib 2 -ob 10
+  radix-tool -i "1010" -in 2 -on 10
   
   # Convert decimal 255 to binary
   radix-tool --input "255" --input-base-num 10 --output-base-num 2`)

@@ -36,27 +36,27 @@ func (a *App) Run() error {
 		inputContent = string(content)
 	}
 
-	if a.cfg.OutputBaseRandom != "" && a.cfg.OutputBaseSeq != "" {
-		return fmt.Errorf("cannot use both -obr and -obs at the same time")
+	if a.cfg.OutputRandomBase != "" && a.cfg.OutputOrderBase != "" {
+		return fmt.Errorf("cannot use both -orb and -oob at the same time")
 	}
 
-	if a.cfg.OutputBaseRandom != "" {
+	if a.cfg.OutputRandomBase != "" {
 		return a.handleOutputBaseRandom(inputContent)
 	}
 
-	if a.cfg.OutputBaseSeq != "" {
+	if a.cfg.OutputOrderBase != "" {
 		return a.handleOutputBaseSeq(inputContent)
 	}
 
-	if a.cfg.InputStr == "" && a.cfg.InputBase == 0 {
+	if a.cfg.InputBaseStr == "" && a.cfg.InputBaseNum == 0 {
 		return fmt.Errorf("must use either -is or -ib")
 	}
 
-	if a.cfg.InputStr != "" && a.cfg.InputBase != 0 {
+	if a.cfg.InputBaseStr != "" && a.cfg.InputBaseNum != 0 {
 		return fmt.Errorf("cannot use both -is and -ib at the same time, please use either one")
 	}
 
-	if a.cfg.OutputStr != "" && a.cfg.OutputBase != 0 {
+	if a.cfg.OutputBaseStr != "" && a.cfg.OutputBaseNum != 0 {
 		return fmt.Errorf("cannot use both -os and -ob at the same time, please use either one")
 	}
 
@@ -74,12 +74,12 @@ func (a *App) Run() error {
 		return fmt.Errorf("output file cannot be the same as input file")
 	}
 
-	inputConverter, err := a.createConverter(inputStr, a.cfg.InputStr, a.cfg.InputBase)
+	inputConverter, err := a.createConverter(inputStr, a.cfg.InputBaseStr, a.cfg.InputBaseNum)
 	if err != nil {
 		return err
 	}
 
-	outputConverter, err := a.createConverter(outputStr, a.cfg.OutputStr, a.cfg.OutputBase)
+	outputConverter, err := a.createConverter(outputStr, a.cfg.OutputBaseStr, a.cfg.OutputBaseNum)
 	if err != nil {
 		return err
 	}
@@ -90,36 +90,14 @@ func (a *App) Run() error {
 	return a.writeOutput(result)
 }
 
-func (a *App) handleOutputBaseRandom(inputContent string) error {
-	result := utils.ShuffleString(utils.RemoveDuplicates(inputContent))
-
-	err := utils.WriteFile(a.cfg.OutputBaseRandom, []byte(result), 0644)
-	if err != nil {
-		return fmt.Errorf("error writing random output file: %w", err)
-	}
-	fmt.Printf("Random output written to %s\n", a.cfg.OutputBaseRandom)
-	return nil
-}
-
-func (a *App) handleOutputBaseSeq(inputContent string) error {
-	result := utils.RemoveDuplicates(inputContent)
-
-	err := utils.WriteFile(a.cfg.OutputBaseSeq, []byte(result), 0644)
-	if err != nil {
-		return fmt.Errorf("error writing sequence output file: %w", err)
-	}
-	fmt.Printf("Sequence output written to %s\n", a.cfg.OutputBaseSeq)
-	return nil
-}
-
 func (a *App) processInputStr() (string, error) {
-	if a.cfg.InputStr == "" {
+	if a.cfg.InputBaseStr == "" {
 		return "", nil
 	}
 
-	inputStr := a.cfg.InputStr
-	if _, err := os.Stat(a.cfg.InputStr); err == nil {
-		content, err := utils.ReadFile(a.cfg.InputStr)
+	inputStr := a.cfg.InputBaseStr
+	if _, err := os.Stat(a.cfg.InputBaseStr); err == nil {
+		content, err := utils.ReadFile(a.cfg.InputBaseStr)
 		if err != nil {
 			return "", fmt.Errorf("error reading -is file: %w", err)
 		}
@@ -134,13 +112,13 @@ func (a *App) processInputStr() (string, error) {
 }
 
 func (a *App) processOutputStr() (string, error) {
-	if a.cfg.OutputStr == "" {
+	if a.cfg.OutputBaseStr == "" {
 		return "", nil
 	}
 
-	outputStr := a.cfg.OutputStr
-	if _, err := os.Stat(a.cfg.OutputStr); err == nil {
-		content, err := utils.ReadFile(a.cfg.OutputStr)
+	outputStr := a.cfg.OutputBaseStr
+	if _, err := os.Stat(a.cfg.OutputBaseStr); err == nil {
+		content, err := utils.ReadFile(a.cfg.OutputBaseStr)
 		if err != nil {
 			return "", fmt.Errorf("error reading -os file: %w", err)
 		}
@@ -152,6 +130,28 @@ func (a *App) processOutputStr() (string, error) {
 	}
 
 	return outputStr, nil
+}
+
+func (a *App) handleOutputBaseRandom(inputContent string) error {
+	result := utils.ShuffleString(utils.RemoveDuplicates(inputContent))
+
+	err := utils.WriteFile(a.cfg.OutputRandomBase, []byte(result), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing random output file: %w", err)
+	}
+	fmt.Printf("Random output written to %s\n", a.cfg.OutputRandomBase)
+	return nil
+}
+
+func (a *App) handleOutputBaseSeq(inputContent string) error {
+	result := utils.RemoveDuplicates(inputContent)
+
+	err := utils.WriteFile(a.cfg.OutputOrderBase, []byte(result), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing sequence output file: %w", err)
+	}
+	fmt.Printf("Sequence output written to %s\n", a.cfg.OutputOrderBase)
+	return nil
 }
 
 func (a *App) createConverter(str string, strParam string, base int) (*radix.Radix, error) {

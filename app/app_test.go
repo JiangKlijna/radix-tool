@@ -15,7 +15,7 @@ func TestParseFlags(t *testing.T) {
 	}{
 		{
 			name:          "basic conversion",
-			args:          []string{"-i", "255", "-ib", "10", "-ob", "16"},
+			args:          []string{"-i", "255", "-in", "10", "-on", "16"},
 			expectedInput: "255",
 			expectedIB:    10,
 			expectedOB:    16,
@@ -56,11 +56,11 @@ func TestParseFlags(t *testing.T) {
 			if cfg.Input != tt.expectedInput {
 				t.Errorf("ParseFlags() Input = %v, want %v", cfg.Input, tt.expectedInput)
 			}
-			if cfg.InputBase != tt.expectedIB {
-				t.Errorf("ParseFlags() InputBase = %v, want %v", cfg.InputBase, tt.expectedIB)
+			if cfg.InputBaseNum != tt.expectedIB {
+				t.Errorf("ParseFlags() InputBaseNum = %v, want %v", cfg.InputBaseNum, tt.expectedIB)
 			}
-			if cfg.OutputBase != tt.expectedOB {
-				t.Errorf("ParseFlags() OutputBase = %v, want %v", cfg.OutputBase, tt.expectedOB)
+			if cfg.OutputBaseNum != tt.expectedOB {
+				t.Errorf("ParseFlags() OutputBaseNum = %v, want %v", cfg.OutputBaseNum, tt.expectedOB)
 			}
 			if cfg.Help != tt.expectHelp {
 				t.Errorf("ParseFlags() Help = %v, want %v", cfg.Help, tt.expectHelp)
@@ -89,11 +89,11 @@ func TestAppRun_NoInput(t *testing.T) {
 	}
 }
 
-func TestAppRun_MissingInputBase(t *testing.T) {
+func TestAppRun_MissingInputBaseNum(t *testing.T) {
 	cfg := &Config{
-		Input:     "255",
-		InputBase: 0,
-		InputStr:  "",
+		Input:        "255",
+		InputBaseNum: 0,
+		InputBaseStr: "",
 	}
 	app := New(cfg)
 
@@ -103,10 +103,10 @@ func TestAppRun_MissingInputBase(t *testing.T) {
 	}
 }
 
-func TestAppRun_InvalidInputBase(t *testing.T) {
+func TestAppRun_InvalidInputBaseNum(t *testing.T) {
 	cfg := &Config{
-		Input:     "255",
-		InputBase: 1,
+		Input:        "255",
+		InputBaseNum: 1,
 	}
 	app := New(cfg)
 
@@ -116,11 +116,11 @@ func TestAppRun_InvalidInputBase(t *testing.T) {
 	}
 }
 
-func TestAppRun_InvalidOutputBase(t *testing.T) {
+func TestAppRun_InvalidOutputBaseNum(t *testing.T) {
 	cfg := &Config{
-		Input:      "255",
-		InputBase:  10,
-		OutputBase: 100,
+		Input:         "255",
+		InputBaseNum:  10,
+		OutputBaseNum: 100,
 	}
 	app := New(cfg)
 
@@ -132,9 +132,9 @@ func TestAppRun_InvalidOutputBase(t *testing.T) {
 
 func TestAppRun_ConflictingInputOptions(t *testing.T) {
 	cfg := &Config{
-		Input:     "255",
-		InputBase: 10,
-		InputStr:  "0123456789",
+		Input:        "255",
+		InputBaseNum: 10,
+		InputBaseStr: "0123456789",
 	}
 	app := New(cfg)
 
@@ -146,10 +146,10 @@ func TestAppRun_ConflictingInputOptions(t *testing.T) {
 
 func TestAppRun_ConflictingOutputOptions(t *testing.T) {
 	cfg := &Config{
-		Input:      "255",
-		InputBase:  10,
-		OutputBase: 16,
-		OutputStr:  "0123456789abcdef",
+		Input:         "255",
+		InputBaseNum:  10,
+		OutputBaseNum: 16,
+		OutputBaseStr: "0123456789abcdef",
 	}
 	app := New(cfg)
 
@@ -162,8 +162,8 @@ func TestAppRun_ConflictingOutputOptions(t *testing.T) {
 func TestAppRun_ConflictingRandomAndSeq(t *testing.T) {
 	cfg := &Config{
 		Input:            "abc",
-		OutputBaseRandom: "random.txt",
-		OutputBaseSeq:    "seq.txt",
+		OutputRandomBase: "random.txt",
+		OutputOrderBase:  "seq.txt",
 	}
 	app := New(cfg)
 
@@ -175,9 +175,9 @@ func TestAppRun_ConflictingRandomAndSeq(t *testing.T) {
 
 func TestAppRun_SameInputOutputFile(t *testing.T) {
 	cfg := &Config{
-		Input:     "test.txt",
-		InputBase: 10,
-		Output:    "test.txt",
+		Input:        "test.txt",
+		InputBaseNum: 10,
+		Output:       "test.txt",
 	}
 	app := New(cfg)
 
@@ -189,9 +189,9 @@ func TestAppRun_SameInputOutputFile(t *testing.T) {
 
 func TestAppRun_DecimalToHex(t *testing.T) {
 	cfg := &Config{
-		Input:      "255",
-		InputBase:  10,
-		OutputBase: 16,
+		Input:         "255",
+		InputBaseNum:  10,
+		OutputBaseNum: 16,
 	}
 	app := New(cfg)
 
@@ -203,9 +203,9 @@ func TestAppRun_DecimalToHex(t *testing.T) {
 
 func TestAppRun_BinaryToDecimal(t *testing.T) {
 	cfg := &Config{
-		Input:      "1010",
-		InputBase:  2,
-		OutputBase: 10,
+		Input:         "1010",
+		InputBaseNum:  2,
+		OutputBaseNum: 10,
 	}
 	app := New(cfg)
 
@@ -217,9 +217,9 @@ func TestAppRun_BinaryToDecimal(t *testing.T) {
 
 func TestAppRun_CustomCharSet(t *testing.T) {
 	cfg := &Config{
-		Input:     "FF",
-		InputStr:  "0123456789ABCDEF",
-		OutputStr: "0123456789",
+		Input:         "FF",
+		InputBaseStr:  "0123456789ABCDEF",
+		OutputBaseStr: "0123456789",
 	}
 	app := New(cfg)
 
@@ -231,8 +231,8 @@ func TestAppRun_CustomCharSet(t *testing.T) {
 
 func TestAppRun_InputStrWithDuplicates(t *testing.T) {
 	cfg := &Config{
-		Input:    "test",
-		InputStr: "001122",
+		Input:        "test",
+		InputBaseStr: "001122",
 	}
 	app := New(cfg)
 
@@ -244,9 +244,9 @@ func TestAppRun_InputStrWithDuplicates(t *testing.T) {
 
 func TestAppRun_OutputStrWithDuplicates(t *testing.T) {
 	cfg := &Config{
-		Input:     "test",
-		InputBase: 10,
-		OutputStr: "001122",
+		Input:         "test",
+		InputBaseNum:  10,
+		OutputBaseStr: "001122",
 	}
 	app := New(cfg)
 
