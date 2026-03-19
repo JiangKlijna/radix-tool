@@ -19,6 +19,7 @@ func (ch *characterRadix) GetIntByRune(r rune) *big.Int {
 	return big.NewInt(int64(r))
 }
 func NewCharacterRadix(bit int) *Radix {
+	// bit [2, 0xD800|55296, 0xDFFF|57343]
 	return &Radix{&characterRadix{big.NewInt(int64(bit))}}
 }
 

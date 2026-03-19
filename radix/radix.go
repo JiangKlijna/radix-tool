@@ -67,8 +67,6 @@ func (radix *Radix) XToTen(x string) *big.Int {
 }
 
 // TenToXParallel 并行10进制转X进制
-
-// TenToXParallel 并行10进制转X进制
 func (radix *Radix) TenToXParallel(i *big.Int) string {
 	// 1. 基础情况：0值处理
 	if i.Sign() == 0 {

@@ -36,8 +36,18 @@ func (a *App) Run() error {
 		inputContent = string(content)
 	}
 
-	if a.cfg.OutputRandomBase != "" && a.cfg.OutputOrderBase != "" {
-		return fmt.Errorf("cannot use both -orb and -oob at the same time")
+	count := 0
+	if a.cfg.OutputRandomBase != "" {
+		count++
+	}
+	if a.cfg.OutputOrderBase != "" {
+		count++
+	}
+	if a.cfg.OutputUtf8Base != "" {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("can only use one of -orb, -oob, -oub at a time")
 	}
 
 	if a.cfg.OutputRandomBase != "" {
@@ -48,16 +58,8 @@ func (a *App) Run() error {
 		return a.handleOutputBaseSeq(inputContent)
 	}
 
-	if a.cfg.InputBaseStr == "" && a.cfg.InputBaseNum == 0 {
-		return fmt.Errorf("must use either -is or -ib")
-	}
-
-	if a.cfg.InputBaseStr != "" && a.cfg.InputBaseNum != 0 {
-		return fmt.Errorf("cannot use both -is and -ib at the same time, please use either one")
-	}
-
-	if a.cfg.OutputBaseStr != "" && a.cfg.OutputBaseNum != 0 {
-		return fmt.Errorf("cannot use both -os and -ob at the same time, please use either one")
+	if a.cfg.OutputUtf8Base != "" {
+		return a.handleOutputUtf8Base(inputContent, a.cfg.InputBaseUtf8)
 	}
 
 	inputStr, err := a.processInputStr()
@@ -74,12 +76,12 @@ func (a *App) Run() error {
 		return fmt.Errorf("output file cannot be the same as input file")
 	}
 
-	inputConverter, err := a.createConverter(inputStr, a.cfg.InputBaseStr, a.cfg.InputBaseNum)
+	inputConverter, err := a.createConverter(inputContent, inputStr, a.cfg.InputBaseStr, a.cfg.InputBaseNum, a.cfg.InputBaseUtf8, "input")
 	if err != nil {
 		return err
 	}
 
-	outputConverter, err := a.createConverter(outputStr, a.cfg.OutputBaseStr, a.cfg.OutputBaseNum)
+	outputConverter, err := a.createConverter(inputContent, outputStr, a.cfg.OutputBaseStr, a.cfg.OutputBaseNum, a.cfg.OutputBaseUtf8, "output")
 	if err != nil {
 		return err
 	}
@@ -154,16 +156,83 @@ func (a *App) handleOutputBaseSeq(inputContent string) error {
 	return nil
 }
 
-func (a *App) createConverter(str string, strParam string, base int) (*radix.Radix, error) {
+func (a *App) handleOutputUtf8Base(inputContent string, oub int) error {
+	var N int
+	if oub < 2 {
+		runes := []rune(inputContent)
+		maxVal := 0
+		for _, r := range runes {
+			if int(r) > maxVal {
+				maxVal = int(r)
+			}
+		}
+		N = maxVal + 1
+	} else {
+		N = oub
+	}
+
+	var result []rune
+	for i := 0; i < N; i++ {
+		result = append(result, rune(i))
+	}
+
+	err := utils.WriteFile(a.cfg.OutputUtf8Base, []byte(string(result)), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing sequence output file: %w", err)
+	}
+	fmt.Printf("Utf8 %d output written to %s\n", N, a.cfg.OutputUtf8Base)
+	return nil
+}
+
+func (a *App) createConverter(inputContent string, baseStr string, strParam string, baseNum int, baseUtf8 int, kind string) (*radix.Radix, error) {
+	count := 0
 	if strParam != "" {
-		return radix.NewRadixByString(str), nil
+		count++
+	}
+	if baseNum != 0 {
+		count++
+	}
+	if baseUtf8 != 0 {
+		count++
+	}
+	if count != 1 {
+		if kind == "input" {
+			return nil, fmt.Errorf("must use exactly one of -is, -ib, -iu")
+		}
+		return nil, fmt.Errorf("must use exactly one of -os, -ob, -ou")
 	}
 
-	if base >= 2 && base <= 62 {
-		return radix.NewRadixByBit(base), nil
+	if strParam != "" {
+		return radix.NewRadixByString(baseStr), nil
 	}
 
-	return nil, fmt.Errorf("base must be between 2 and 62, got: %d", base)
+	if baseNum >= 2 && baseNum <= 62 {
+		return radix.NewRadixByBit(baseNum), nil
+	}
+
+	if baseUtf8 != 0 {
+		var N int
+		if baseUtf8 < 2 {
+			runes := []rune(inputContent)
+			maxVal := 0
+			for _, r := range runes {
+				if int(r) > maxVal {
+					maxVal = int(r)
+				}
+			}
+			N = maxVal + 1
+		} else {
+			N = baseUtf8
+		}
+		// var result []rune
+		// for i := 0; i < N; i++ {
+		// 	result = append(result, rune(i))
+		// }
+		return radix.NewCharacterRadix(N), nil
+		// return radix.NewRadixByString(string(result)), nil
+	}
+
+	return nil, fmt.Errorf("invalid base configuration")
 }
 
 func (a *App) writeOutput(result string) error {

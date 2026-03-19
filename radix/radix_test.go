@@ -109,16 +109,52 @@ func TestCustomAlphabet(t *testing.T) {
 }
 
 func TestNewCharacterRadix(t *testing.T) {
-	// Test characterRadix implementation
-	characterRadix := NewCharacterRadix(10000) // Big value from original source code
-	number := big.NewInt(1234567)
+	testCases := []struct {
+		name string
+		bit  int
+		num  int64
+	}{
+		{"small", 10000, 1234567},
+		{"at_surrogate_boundary", 55296, 123456789},
+		{"just_above_surrogate", 55300, 123456789},
+		{"large", 100000, 9876543210},
+		{"very_large", 500000, 123456789012345},
+		{"near_max", 1000000, 999999999999999},
+	}
 
-	converted := characterRadix.TenToX(number)
-	backToNum := characterRadix.XToTen(converted)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			radix := NewCharacterRadix(tc.bit)
+			number := big.NewInt(tc.num)
 
-	if backToNum.Cmp(number) != 0 {
-		t.Errorf("Round trip conversion failed. Original: %s, After roundtrip: %s",
-			number.String(), backToNum.String())
+			converted := radix.TenToX(number)
+			backToNum := radix.XToTen(converted)
+
+			if backToNum.Cmp(number) != 0 {
+				t.Errorf("Round trip failed. bit=%d, original: %s, converted: %q, back: %s",
+					tc.bit, number.String(), converted, backToNum.String())
+			}
+		})
+	}
+}
+
+func TestCharacterRadixSurrogateSkip(t *testing.T) {
+	radix := NewCharacterRadix(55300)
+
+	for i := int64(55290); i < 55310; i++ {
+		num := big.NewInt(i)
+		converted := radix.TenToX(num)
+		backToNum := radix.XToTen(converted)
+
+		if backToNum.Cmp(num) != 0 {
+			t.Errorf("Surrogate skip failed at i=%d, converted=%q, back=%s", i, converted, backToNum.String())
+		}
+
+		for _, r := range converted {
+			if r >= 0xD800 && r <= 0xDFFF {
+				t.Errorf("Surrogate rune found in output: U+%04X", r)
+			}
+		}
 	}
 }
 
