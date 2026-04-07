@@ -11,10 +11,12 @@ type Config struct {
 	InputBaseNum     int
 	InputBaseStr     string
 	InputBaseUtf8    int
+	InputBaseByte    bool
 	Output           string
 	OutputBaseNum    int
 	OutputBaseStr    string
 	OutputBaseUtf8   int
+	OutputBaseByte   bool
 	OutputRandomBase string
 	OutputOrderBase  string
 	OutputUtf8Base   string
@@ -39,6 +41,9 @@ func ParseFlags(args []string) (*Config, error) {
 	flagSet.IntVar(&cfg.InputBaseUtf8, "iu", 0, "Input base UTF-8")
 	flagSet.IntVar(&cfg.InputBaseUtf8, "input-base-utf8", 0, "Input base UTF-8")
 
+	flagSet.BoolVar(&cfg.InputBaseByte, "ib", false, "Input base byte (read as []byte, treat as base-256)")
+	flagSet.BoolVar(&cfg.InputBaseByte, "input-base-byte", false, "Input base byte (read as []byte, treat as base-256)")
+
 	flagSet.StringVar(&cfg.Output, "o", "", "Output file path (if empty, prints to cmd)")
 	flagSet.StringVar(&cfg.Output, "output", "", "Output file path (if empty, prints to cmd)")
 
@@ -50,6 +55,9 @@ func ParseFlags(args []string) (*Config, error) {
 
 	flagSet.IntVar(&cfg.OutputBaseUtf8, "ou", 0, "Output base UTF-8")
 	flagSet.IntVar(&cfg.OutputBaseUtf8, "output-base-utf8", 0, "Output base UTF-8")
+
+	flagSet.BoolVar(&cfg.OutputBaseByte, "ob", false, "Output base byte (convert []rune to []byte for output)")
+	flagSet.BoolVar(&cfg.OutputBaseByte, "output-base-byte", false, "Output base byte (convert []rune to []byte for output)")
 
 	flagSet.StringVar(&cfg.OutputRandomBase, "orb", "", "Randomly output characters from -is (empty means to stderr)")
 	flagSet.StringVar(&cfg.OutputRandomBase, "output-random-base", "", "Randomly output characters from -is (empty means to stderr)")
@@ -83,11 +91,13 @@ OPTIONS:
   -i, --input VALUE        Input value (number or file path) [required]
   -in, --input-base-num N  Input base number (2-62)
   -is, --input-base-str STR  Input base characters
-  -ibu, --input-base-utf8 N  Input base UTF-8
+  -iu, --input-base-utf8 N  Input base UTF-8
+  -ib, --input-base-byte    Input base byte (read as []byte, treat as base-256)
   -o, --output FILE        Output file path (prints to stdout if omitted)
   -on, --output-base-num N Output base number (2-62, defaults to input base) 
   -os, --output-base-str STR Output base characters
   -ou, --output-base-utf8 N Output base UTF-8
+  -ob, --output-base-byte   Output base byte (convert []rune to []byte for output)
   -oub, --output-utf8-base N Output UTF-8 base
   -orb, --output-random-base  Randomly output characters from -is
   -oob, --output-order-base  Sequence output characters from -is

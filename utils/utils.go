@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 )
@@ -48,4 +49,25 @@ func ReadFile(filename string) ([]byte, error) {
 // WriteFile writes data to a file named by filename with the given permissions
 func WriteFile(filename string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(filename, data, perm)
+}
+
+// BytesToRunes converts []byte to []rune directly (each byte becomes a rune with same value)
+func BytesToRunes(b []byte) []rune {
+	runes := make([]rune, len(b))
+	for i, v := range b {
+		runes[i] = rune(v)
+	}
+	return runes
+}
+
+// RunesToBytes converts []rune to []byte (rune values must be in range 0-255)
+func RunesToBytes(r []rune) ([]byte, error) {
+	bytes := make([]byte, len(r))
+	for i, v := range r {
+		if v < 0 || v > 255 {
+			return nil, fmt.Errorf("rune value %d at position %d is out of byte range (0-255)", v, i)
+		}
+		bytes[i] = byte(v)
+	}
+	return bytes, nil
 }

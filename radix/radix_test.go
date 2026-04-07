@@ -20,7 +20,7 @@ func TestTenToX(t *testing.T) {
 	// Test big.Int to hex conversion
 	radixConverter := NewRadixByBit(16)
 	bigNum := big.NewInt(255)
-	result := radixConverter.TenToX(bigNum)
+	result := string(radixConverter.TenToX(bigNum))
 	expected := "ff"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -132,7 +132,7 @@ func TestNewCharacterRadix(t *testing.T) {
 
 			if backToNum.Cmp(number) != 0 {
 				t.Errorf("Round trip failed. bit=%d, original: %s, converted: %q, back: %s",
-					tc.bit, number.String(), converted, backToNum.String())
+					tc.bit, number.String(), string(converted), backToNum.String())
 			}
 		})
 	}
@@ -147,7 +147,7 @@ func TestCharacterRadixSurrogateSkip(t *testing.T) {
 		backToNum := radix.XToTen(converted)
 
 		if backToNum.Cmp(num) != 0 {
-			t.Errorf("Surrogate skip failed at i=%d, converted=%q, back=%s", i, converted, backToNum.String())
+			t.Errorf("Surrogate skip failed at i=%d, converted=%q, back=%s", i, string(converted), backToNum.String())
 		}
 
 		for _, r := range converted {
@@ -167,8 +167,8 @@ func TestTenToXParallel(t *testing.T) {
 
 		// Test for small values (won't trigger parallel path, just correctness check)
 		smallValue := big.NewInt(255)
-		sequentialResult := converter.TenToX(smallValue)
-		parallelResult := converter.TenToXParallel(smallValue)
+		sequentialResult := string(converter.TenToX(smallValue))
+		parallelResult := string(converter.TenToXParallel(smallValue))
 		if sequentialResult != parallelResult {
 			t.Errorf("Base %d: Sequential (%s) and parallel (%s) results differ for 255",
 				base, sequentialResult, parallelResult)
@@ -177,16 +177,16 @@ func TestTenToXParallel(t *testing.T) {
 		// For parallel testing: need BitLen() >= 1024 to trigger parallel code path
 		// Use 2^1500 which has 1501 bits > 1024 threshold
 		largeValue := new(big.Int).Exp(big.NewInt(2), big.NewInt(1500), nil)
-		sequentialResult = converter.TenToX(largeValue)
-		parallelResult = converter.TenToXParallel(largeValue)
+		sequentialResult = string(converter.TenToX(largeValue))
+		parallelResult = string(converter.TenToXParallel(largeValue))
 		if sequentialResult != parallelResult {
 			t.Errorf("Base %d: Sequential and parallel results differ for large input (2^1500)", base)
 		}
 
 		// Extra large value to ensure multiple levels of parallel recursion
 		extraLargeValue := new(big.Int).Exp(big.NewInt(2), big.NewInt(5000), nil)
-		sequentialResult = converter.TenToX(extraLargeValue)
-		parallelResult = converter.TenToXParallel(extraLargeValue)
+		sequentialResult = string(converter.TenToX(extraLargeValue))
+		parallelResult = string(converter.TenToXParallel(extraLargeValue))
 		if sequentialResult != parallelResult {
 			t.Errorf("Base %d: Sequential and parallel results differ for extra large input (2^5000)", base)
 		}
@@ -209,17 +209,17 @@ func TestXToTenParallel(t *testing.T) {
 		converter := NewRadixByBit(tc.base)
 
 		// Test simple cases (short strings won't trigger parallel path, just correctness check)
-		testStr := tc.str
+		testStr := []rune(tc.str)
 		sequentialResult := converter.XToTen(testStr).String()
 		parallelResult := converter.XToTenParallel(testStr).String()
 		if sequentialResult != parallelResult {
 			t.Errorf("Base %d: Sequential (%s) and parallel (%s) results differ for '%s'",
-				tc.base, sequentialResult, parallelResult, testStr)
+				tc.base, sequentialResult, parallelResult, tc.str)
 		}
 
 		// For testing with longer strings: need len >= 256 to trigger parallel code path
 		// Use 1000 chars > 256 threshold
-		longStr := strings.Repeat(string(converter.Radixer.GetRuneByInt(int64(tc.base-1))), 1000)
+		longStr := []rune(strings.Repeat(string(converter.Radixer.GetRuneByInt(int64(tc.base-1))), 1000))
 		sequentialResult = converter.XToTen(longStr).String()
 		parallelResult = converter.XToTenParallel(longStr).String()
 		if sequentialResult != parallelResult {
@@ -227,7 +227,7 @@ func TestXToTenParallel(t *testing.T) {
 		}
 
 		// Extra long string to ensure multiple levels of parallel recursion
-		extraLongStr := strings.Repeat(string(converter.Radixer.GetRuneByInt(int64(tc.base-1))), 5000)
+		extraLongStr := []rune(strings.Repeat(string(converter.Radixer.GetRuneByInt(int64(tc.base-1))), 5000))
 		sequentialResult = converter.XToTen(extraLongStr).String()
 		parallelResult = converter.XToTenParallel(extraLongStr).String()
 		if sequentialResult != parallelResult {
@@ -261,7 +261,7 @@ func TestRoundTripConsistency(t *testing.T) {
 		}
 
 		// Test with parallel methods too
-		numInDecParallel := converter.XToTenParallel(tc.value).String()
+		numInDecParallel := converter.XToTenParallel([]rune(tc.value)).String()
 		if numInDec != numInDecParallel {
 			t.Errorf("Base %d: Sequential (%s) and parallel (%s) results differ for %s",
 				tc.base, numInDec, numInDecParallel, tc.value)
@@ -270,7 +270,7 @@ func TestRoundTripConsistency(t *testing.T) {
 		// Test parallel-to-parallel round trip using big.Int
 		bigVal := new(big.Int)
 		bigVal.SetString(numInDec, 10)
-		valueFromParallel := converter.TenToXParallel(bigVal)
+		valueFromParallel := string(converter.TenToXParallel(bigVal))
 		if valueFromParallel != tc.value {
 			t.Errorf("Base %d: Parallel round trip failed: %s -> %s -> %s", tc.base, tc.value, numInDec, valueFromParallel)
 		}
@@ -285,8 +285,8 @@ func TestLargeValues(t *testing.T) {
 	hugeValue := new(big.Int)
 	hugeValue.Exp(big.NewInt(2), big.NewInt(2048), nil) // 2^2048 has 2049 bits
 
-	seqResult := converter.TenToX(hugeValue)
-	parResult := converter.TenToXParallel(hugeValue)
+	seqResult := string(converter.TenToX(hugeValue))
+	parResult := string(converter.TenToXParallel(hugeValue))
 
 	if seqResult != parResult {
 		t.Errorf("Sequential (%s) and parallel (%s) results differ for large value", seqResult, parResult)
@@ -309,15 +309,15 @@ func TestParallelMethodsConsistencyWithLongInputs(t *testing.T) {
 		// Large numeric value - should trigger parallel processing in TenToXParallel
 		hugeNum := new(big.Int)
 		hugeNum.SetString(strings.Repeat("9", 1000), 10) // 1000-digit number
-		sequentialTenToX := converter.TenToX(hugeNum)
-		parallelTenToX := converter.TenToXParallel(hugeNum)
+		sequentialTenToX := string(converter.TenToX(hugeNum))
+		parallelTenToX := string(converter.TenToXParallel(hugeNum))
 		if sequentialTenToX != parallelTenToX {
 			t.Errorf("Base %d: TenToX vs TenToXParallel differ for large input", base)
 		}
 
 		// Large base-X string - should trigger parallel processing in XToTenParallel
 		largestdigit := converter.Radixer.GetRuneByInt(int64(base - 1))
-		longXString := strings.Repeat(string(largestdigit), 1000) // Very long base-X string
+		longXString := []rune(strings.Repeat(string(largestdigit), 1000)) // Very long base-X string
 		sequentialXToTen := converter.XToTen(longXString).String()
 		parallelXToTen := converter.XToTenParallel(longXString).String()
 		if sequentialXToTen != parallelXToTen {

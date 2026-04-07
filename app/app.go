@@ -27,15 +27,6 @@ func (a *App) Run() error {
 		return nil
 	}
 
-	inputContent := a.cfg.Input
-	if _, err := os.Stat(a.cfg.Input); err == nil {
-		content, err := utils.ReadFile(a.cfg.Input)
-		if err != nil {
-			return fmt.Errorf("error reading input file: %w", err)
-		}
-		inputContent = string(content)
-	}
-
 	count := 0
 	if a.cfg.OutputRandomBase != "" {
 		count++
@@ -50,16 +41,37 @@ func (a *App) Run() error {
 		return fmt.Errorf("can only use one of -orb, -oob, -oub at a time")
 	}
 
+	var inputRunes []rune
+	var isFile bool
+
+	if _, err := os.Stat(a.cfg.Input); err == nil {
+		isFile = true
+		content, err := utils.ReadFile(a.cfg.Input)
+		if err != nil {
+			return fmt.Errorf("error reading input file: %w", err)
+		}
+		if a.cfg.InputBaseByte {
+			inputRunes = utils.BytesToRunes(content)
+		} else {
+			inputRunes = []rune(string(content))
+		}
+	} else {
+		if a.cfg.InputBaseByte {
+			return fmt.Errorf("-ib requires input to be a file path")
+		}
+		inputRunes = []rune(a.cfg.Input)
+	}
+
 	if a.cfg.OutputRandomBase != "" {
-		return a.handleOutputBaseRandom(inputContent)
+		return a.handleOutputBaseRandom(string(inputRunes))
 	}
 
 	if a.cfg.OutputOrderBase != "" {
-		return a.handleOutputBaseSeq(inputContent)
+		return a.handleOutputBaseSeq(string(inputRunes))
 	}
 
 	if a.cfg.OutputUtf8Base != "" {
-		return a.handleOutputUtf8Base(inputContent, a.cfg.InputBaseUtf8)
+		return a.handleOutputUtf8Base(string(inputRunes), a.cfg.InputBaseUtf8)
 	}
 
 	inputStr, err := a.processInputStr()
@@ -72,24 +84,24 @@ func (a *App) Run() error {
 		return err
 	}
 
-	if a.cfg.Output != "" && a.cfg.Input == a.cfg.Output {
+	if a.cfg.Output != "" && isFile && a.cfg.Input == a.cfg.Output {
 		return fmt.Errorf("output file cannot be the same as input file")
 	}
 
-	inputConverter, err := a.createConverter(inputContent, inputStr, a.cfg.InputBaseStr, a.cfg.InputBaseNum, a.cfg.InputBaseUtf8, "input")
+	inputConverter, err := a.createInputConverter(inputRunes, inputStr)
 	if err != nil {
 		return err
 	}
 
-	outputConverter, err := a.createConverter(inputContent, outputStr, a.cfg.OutputBaseStr, a.cfg.OutputBaseNum, a.cfg.OutputBaseUtf8, "output")
+	outputConverter, err := a.createOutputConverter(outputStr)
 	if err != nil {
 		return err
 	}
 
-	decimalValue := inputConverter.XToTenParallel(inputContent)
-	result := outputConverter.TenToXParallel(decimalValue)
+	decimalValue := inputConverter.XToTenParallel(inputRunes)
+	resultRunes := outputConverter.TenToXParallel(decimalValue)
 
-	return a.writeOutput(result)
+	return a.writeOutputRunes(resultRunes)
 }
 
 func (a *App) processInputStr() (string, error) {
@@ -184,67 +196,120 @@ func (a *App) handleOutputUtf8Base(inputContent string, oub int) error {
 	return nil
 }
 
-func (a *App) createConverter(inputContent string, baseStr string, strParam string, baseNum int, baseUtf8 int, kind string) (*radix.Radix, error) {
+func (a *App) createInputConverter(inputRunes []rune, baseStr string) (*radix.Radix, error) {
 	count := 0
-	if strParam != "" {
+	if a.cfg.InputBaseStr != "" {
 		count++
 	}
-	if baseNum != 0 {
+	if a.cfg.InputBaseNum != 0 {
 		count++
 	}
-	if baseUtf8 != 0 {
+	if a.cfg.InputBaseUtf8 != 0 {
+		count++
+	}
+	if a.cfg.InputBaseByte {
 		count++
 	}
 	if count != 1 {
-		if kind == "input" {
-			return nil, fmt.Errorf("must use exactly one of -is, -ib, -iu")
-		}
-		return nil, fmt.Errorf("must use exactly one of -os, -ob, -ou")
+		return nil, fmt.Errorf("must use exactly one of -is, -in, -iu, -ib")
 	}
 
-	if strParam != "" {
+	if a.cfg.InputBaseByte {
+		return radix.NewCharacterRadix(256), nil
+	}
+
+	if a.cfg.InputBaseStr != "" {
 		return radix.NewRadixByString(baseStr), nil
 	}
 
-	if baseNum >= 2 && baseNum <= 62 {
-		return radix.NewRadixByBit(baseNum), nil
+	if a.cfg.InputBaseNum >= 2 && a.cfg.InputBaseNum <= 62 {
+		return radix.NewRadixByBit(a.cfg.InputBaseNum), nil
 	}
 
-	if baseUtf8 != 0 {
+	if a.cfg.InputBaseUtf8 != 0 {
 		var N int
-		if baseUtf8 < 2 {
-			runes := []rune(inputContent)
+		if a.cfg.InputBaseUtf8 < 2 {
 			maxVal := 0
-			for _, r := range runes {
+			for _, r := range inputRunes {
 				if int(r) > maxVal {
 					maxVal = int(r)
 				}
 			}
 			N = maxVal + 1
 		} else {
-			N = baseUtf8
+			N = a.cfg.InputBaseUtf8
 		}
-		// var result []rune
-		// for i := 0; i < N; i++ {
-		// 	result = append(result, rune(i))
-		// }
 		return radix.NewCharacterRadix(N), nil
-		// return radix.NewRadixByString(string(result)), nil
 	}
 
-	return nil, fmt.Errorf("invalid base configuration")
+	return nil, fmt.Errorf("invalid input base configuration")
 }
 
-func (a *App) writeOutput(result string) error {
+func (a *App) createOutputConverter(baseStr string) (*radix.Radix, error) {
+	count := 0
+	if a.cfg.OutputBaseStr != "" {
+		count++
+	}
+	if a.cfg.OutputBaseNum != 0 {
+		count++
+	}
+	if a.cfg.OutputBaseUtf8 != 0 {
+		count++
+	}
+	if a.cfg.OutputBaseByte {
+		count++
+	}
+	if count != 1 {
+		return nil, fmt.Errorf("must use exactly one of -os, -on, -ou, -ob")
+	}
+
+	if a.cfg.OutputBaseByte {
+		return radix.NewCharacterRadix(256), nil
+	}
+
+	if a.cfg.OutputBaseStr != "" {
+		return radix.NewRadixByString(baseStr), nil
+	}
+
+	if a.cfg.OutputBaseNum >= 2 && a.cfg.OutputBaseNum <= 62 {
+		return radix.NewRadixByBit(a.cfg.OutputBaseNum), nil
+	}
+
+	if a.cfg.OutputBaseUtf8 != 0 {
+		N := a.cfg.OutputBaseUtf8
+		if N < 2 {
+			N = 256
+		}
+		return radix.NewCharacterRadix(N), nil
+	}
+
+	return nil, fmt.Errorf("invalid output base configuration")
+}
+
+func (a *App) writeOutputRunes(result []rune) error {
+	var data []byte
+	var err error
+	if a.cfg.OutputBaseByte {
+		data, err = utils.RunesToBytes(result)
+		if err != nil {
+			return fmt.Errorf("error converting runes to bytes: %w", err)
+		}
+	} else {
+		data = []byte(string(result))
+	}
+
 	if a.cfg.Output == "" {
-		fmt.Println(result)
+		if a.cfg.OutputBaseByte {
+			return fmt.Errorf("-ob requires -o to specify output file")
+		}
+		fmt.Println(string(result))
 		return nil
 	}
 
-	err := utils.WriteFile(a.cfg.Output, []byte(result), 0644)
+	err = utils.WriteFile(a.cfg.Output, data, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing output file: %w", err)
 	}
-	fmt.Printf("Result written to %s\n", a.cfg.Output)
+	fmt.Printf("Result written to %s (%d bytes)\n", a.cfg.Output, len(data))
 	return nil
 }

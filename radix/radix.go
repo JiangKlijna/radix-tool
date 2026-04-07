@@ -22,13 +22,13 @@ func (radix *Radix) TenStrToX(ten string) string {
 	if !b {
 		panic("invalid decimal string: " + ten)
 	}
-	return radix.TenToX(t)
+	return string(radix.TenToX(t))
 }
 
 // TenToX 10进制转x进制
-func (radix *Radix) TenToX(i *big.Int) string {
+func (radix *Radix) TenToX(i *big.Int) []rune {
 	if i.Sign() == 0 {
-		return string(radix.GetRuneByInt(0))
+		return []rune{radix.GetRuneByInt(0)}
 	}
 	t := new(big.Int).Set(i)
 
@@ -44,33 +44,32 @@ func (radix *Radix) TenToX(i *big.Int) string {
 	for j, k := 0, len(runes)-1; j < k; j, k = j+1, k-1 {
 		runes[j], runes[k] = runes[k], runes[j]
 	}
-	return string(runes)
+	return runes
 }
 
-// XStrToTenStr x进制转10进制
+// XToTenStr x进制转10进制
 func (radix *Radix) XToTenStr(x string) string {
-	return radix.XToTen(x).String()
+	return radix.XToTen([]rune(x)).String()
 }
 
 // XToTen x进制转10进制
-func (radix *Radix) XToTen(x string) *big.Int {
-	runes := []rune(x)
-	length := int64(len(runes))
+func (radix *Radix) XToTen(x []rune) *big.Int {
+	length := int64(len(x))
 	bit := radix.GetBaseNumber()
 
 	num := new(big.Int)
 	for i := length - 1; i >= 0; i-- {
 		temp := new(big.Int).Exp(bit, big.NewInt(length-1-i), nil)
-		num.Add(num, temp.Mul(temp, radix.GetIntByRune(runes[i])))
+		num.Add(num, temp.Mul(temp, radix.GetIntByRune(x[i])))
 	}
 	return num
 }
 
 // TenToXParallel 并行10进制转X进制
-func (radix *Radix) TenToXParallel(i *big.Int) string {
+func (radix *Radix) TenToXParallel(i *big.Int) []rune {
 	// 1. 基础情况：0值处理
 	if i.Sign() == 0 {
-		return string(radix.GetRuneByInt(0))
+		return []rune{radix.GetRuneByInt(0)}
 	}
 
 	// 2. 阈值判断：提高阈值以抵消 Goroutine 调度开销
@@ -98,7 +97,7 @@ func (radix *Radix) TenToXParallel(i *big.Int) string {
 	high.QuoRem(i, split, low)
 
 	// 4. 并发模型优化：主协程处理低位，新协程处理高位
-	ch := make(chan string, 1)
+	ch := make(chan []rune, 1)
 
 	go func() {
 		// 高位任务交给新协程
@@ -106,14 +105,13 @@ func (radix *Radix) TenToXParallel(i *big.Int) string {
 	}()
 
 	// 当前协程直接计算低位，利用等待时间
-	lowStr := radix.TenToXParallel(low)
+	lowRunes := radix.TenToXParallel(low)
 
 	// 接收高位结果
-	highStr := <-ch
+	highRunes := <-ch
 
 	// 5. 合并逻辑：处理前导零对齐
 	if high.Sign() > 0 {
-		lowRunes := []rune(lowStr)
 		padding := n - len(lowRunes)
 
 		if padding > 0 {
@@ -123,22 +121,21 @@ func (radix *Radix) TenToXParallel(i *big.Int) string {
 			for i := range prefix {
 				prefix[i] = zeroRune
 			}
-			// 拼接：前导零 + 低位字符串
-			lowStr = string(prefix) + lowStr
+			// 拼接：高位 + 前导零 + 低位
+			lowRunes = append(prefix, lowRunes...)
 		}
 	}
 
-	// 如果高位为0，直接返回低位（避免无意义的字符串拼接）
+	// 如果高位为0，直接返回低位
 	if high.Sign() == 0 {
-		return lowStr
+		return lowRunes
 	}
 
-	return highStr + lowStr
+	return append(highRunes, lowRunes...)
 }
 
 // XToTenParallel 并行X进制转10进制
-func (radix *Radix) XToTenParallel(x string) *big.Int {
-	runes := []rune(x)
+func (radix *Radix) XToTenParallel(x []rune) *big.Int {
 	// 定义内部递归函数，避免反复类型转换和内存分配
 	var parallelRec func(rs []rune) *big.Int
 	parallelRec = func(rs []rune) *big.Int {
@@ -149,7 +146,7 @@ func (radix *Radix) XToTenParallel(x string) *big.Int {
 
 		// 阈值可以适当调大，big.Int 运算本身有优化，太细的切分得不偿失
 		if n < 256 {
-			return radix.XToTen(string(rs))
+			return radix.XToTen(rs)
 		}
 
 		mid := n / 2
@@ -178,5 +175,5 @@ func (radix *Radix) XToTenParallel(x string) *big.Int {
 		return res
 	}
 
-	return parallelRec(runes)
+	return parallelRec(x)
 }
